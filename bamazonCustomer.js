@@ -1,3 +1,9 @@
+// require dotenv
+require("dotenv").config();
+
+// require password
+const password = require("./db_password.js");
+
 // calls the npm packages
 const mysql = require('mysql');
 const inquirer = require('inquirer');
@@ -12,7 +18,7 @@ const connection = mysql.createConnection({
     user: "root",
   
     // Your password
-    password: "Pacman33#",
+    password: password.db_pass,
     database: "bamazon"
   });
 
@@ -24,16 +30,34 @@ const connection = mysql.createConnection({
 
   function readProducts() {
     console.log("Selecting all products...\n");
-    connection.query("SELECT * FROM products", function(err, res) {
+    connection.query("SELECT * FROM products", function(err, results) {
       if (err) throw err;
       // Log all results of the SELECT statement
-      console.log(res);
-      connection.end();
+      console.log(results);  
+      startUp();
     });
+  }
+  function startUp() {
+    inquirer 
+      .prompt([
+          {
+              name: 'options',
+              type: 'list',
+              messsage: 'What would you like to do today?',
+              choices: ['buy', 'exit']
+          }
+      ]).then(function(answer){
+          if (answer.options === 'buy') {
+              searchProducts();
+          } else {
+              exit();
+          }
+      })
+      
   }
 
   function searchProducts() {
-      let query = 'SELECT product_name, price FROM products WHERE ?';
+      let query = "SELECT product_name, price, stock_quantity FROM products WHERE ?";
 
     inquirer 
       .prompt([
@@ -47,16 +71,39 @@ const connection = mysql.createConnection({
             type: 'number',
             message: 'How many would you like to order?'
           }
+
         ]).then(function(answer){
+            const choiceID = parseInt(answer.ask_id);
+            const quantity = parseInt(answer.quantity);
+            // console.log(query);
             connection.query(query,
-                { answer: answer.number }, function(err, res) {
-                for (var i = 0; i < res.length; i++) {
-                  console.log("Position: " + res[i].position + " || Song: " + res[i].song + " || Year: " + res[i].year);
+                { item_id: choiceID }, 
+                function(err, results) {
+                    // console.log(results,'results');
+
+                for (var i = 0; i < results.length; i++) {
+                  console.log("Name: " + results[i].product_name + " || Price: " + results[i].price);
+                  let amountLeft = parseInt(results[i].stock_quantity) - quantity;
+                  if (answer.ask_id) {
+                    amountLeft--;
+                    console.log('amt left ', amountLeft);
+                        if (amountLeft < 0) {
+                            console.log('Sorry! We have run out of ' + results[i].product_name);
+                        } else {
+                            console.log("Okay, we'll place an order of " + quantity + " for " + results[i].product_name);
+                        }
+                    }
+                    
                 }
-                runSearch();
+                startUp();
               });
-            if (answer.ask_id) {
-                console.log()
-            }
+
+              
         });
+        
+}
+
+function exit() {
+    // process.exit();
+    connection.end();
 }

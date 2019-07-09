@@ -10,15 +10,10 @@ const inquirer = require('inquirer');
 
 const connection = mysql.createConnection({
     host: "localhost",
-  
-    // 
     PORT: 3306,
-  
-    // Your username
     user: "root",
-  
-    // Your password
-    password: password.db_pass,
+    // password: password.db_pass,
+    password: "password",
     database: "bamazon"
   });
 
@@ -33,7 +28,7 @@ const connection = mysql.createConnection({
     connection.query("SELECT * FROM products", function(err, results) {
       if (err) throw err;
       // Log all results of the SELECT statement
-      console.log(results);  
+      console.table(results);  
       startUp();
     });
   }
@@ -53,7 +48,6 @@ const connection = mysql.createConnection({
               exit();
           }
       })
-      
   }
 
   function searchProducts() {
@@ -75,34 +69,41 @@ const connection = mysql.createConnection({
         ]).then(function(answer){
             const choiceID = parseInt(answer.ask_id);
             const quantity = parseInt(answer.quantity);
-            // console.log(query);
             connection.query(query,
                 { item_id: choiceID }, 
                 function(err, results) {
-                    // console.log(results,'results');
+                
+                  // this loop displays the chosen product from id
+                  // change i to 0 to get rid of for loop(potentially)
+                  console.log("Name: " + results[0].product_name + " || Price: " + results[0].price);
+                  let amountLeft = parseInt(results[0].stock_quantity) - quantity;
 
-                for (var i = 0; i < results.length; i++) {
-                  console.log("Name: " + results[i].product_name + " || Price: " + results[i].price);
-                  let amountLeft = parseInt(results[i].stock_quantity) - quantity;
+
                   if (answer.ask_id) {
-                    amountLeft--;
-                    console.log('amt left ', amountLeft);
+                    // amountLeft;
                         if (amountLeft < 0) {
-                            console.log('Sorry! We have run out of ' + results[i].product_name);
+                            console.log('Sorry! We have run out of ' + results[0].product_name);
                         } else {
-                            console.log("Okay, we'll place an order of " + quantity + " for " + results[i].product_name);
+                            console.log("Okay, we'll place an order of " + quantity + " for " + results[0].product_name);
+                            updateProduct(choiceID, quantity);
+                            // UPDATEFUNC
                         }
-                    }
-                    
-                }
+                    }  
+                
                 startUp();
-              });
-
-              
+              });   
         });
-        
 }
 
+function updateProduct(choiceID, quantity) {
+  connection.query(
+  'UPDATE products SET stock_quantity = stock_quantity - ? WHERE item_id = ?',
+  [quantity, choiceID],
+    function(err, res) {
+      console.log(err);
+    }
+  )
+}
 function exit() {
     // process.exit();
     connection.end();
